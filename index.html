@@ -31,7 +31,7 @@
             background: #94a3b8;
         }
 
-        /* Modale <dialog> pulita e fedele all'originale */
+        /* Modale <dialog> pulita */
         dialog {
             padding: 0;
             border: none;
@@ -49,13 +49,13 @@
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
-    <!-- Intestazione fedele all'originale -->
+    <!-- Intestazione -->
     <header class="bg-white border-b border-slate-200 px-4 sm:px-8 py-6 text-center">
         <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
             Cronologia Storica (1517 - 1648)
         </h1>
         <p class="mt-1.5 text-sm sm:text-base text-slate-500">
-            Clicca su qualsiasi evento per visualizzare il dettaglio
+            Clicca su qualsiasi evento o periodo per visualizzare il dettaglio
         </p>
     </header>
 
@@ -121,19 +121,17 @@
     <script>
         /**
          * SCALA TEMPORALE PROPORZIONALE (1517 - 1648)
-         * Ogni anno occupa esattamente PX_PER_YEAR pixel: in questo modo
-         * la posizione sinistra e la larghezza di ogni periodo/governo
-         * corrispondono esattamente alla sua durata storica (endYear - startYear).
+         * Ogni anno occupa esattamente PX_PER_YEAR pixel.
          */
         const START_YEAR = 1517;
         const END_YEAR = 1648;
-        const PX_PER_YEAR = 16; // 16px per anno -> 20 anni (Richelieu 1624-1644) = 320px esatti
+        const PX_PER_YEAR = 16;
         const OFFSET_LEFT = 48;
         const OFFSET_RIGHT = 64;
 
         // Dati storici: Periodi/Governi (con startYear ed endYear) ed Eventi puntuali (con year)
         const TIMELINE_DATA = [
-            // --- PERIODI E GOVERNI (durata proporzionale sull'asse) ---
+            // --- PERIODI E GOVERNI ---
             {
                 type: 'period',
                 title: 'Impero e Regno di Carlo V',
@@ -363,7 +361,7 @@
                 }
             }
 
-            // 2. Periodi e Governi (barre larghe esattamente endYear - startYear)
+            // 2. Periodi e Governi
             const periods = layoutPeriods(TIMELINE_DATA.filter(item => item.type === 'period'));
             const periodLaneHeight = 40;
             const maxPeriodLane = periods.reduce((max, p) => Math.max(max, p.lane), 0);
@@ -403,7 +401,6 @@
                 const x = yearToX(ev.year);
                 const top = ev.lane * eventLaneHeight + 14;
 
-                // Linea verticale fino all'asse
                 const stem = document.createElement('div');
                 stem.style.left = `${x}px`;
                 stem.style.top = '0px';
@@ -411,13 +408,18 @@
                 stem.className = 'absolute w-px bg-slate-300 pointer-events-none';
                 eventsLayer.appendChild(stem);
 
-                // Punto sull'asse
                 const dot = document.createElement('div');
                 dot.style.left = `${x - 4}px`;
                 dot.style.top = '-4px';
                 dot.className = 'absolute w-2 h-2 rounded-full bg-indigo-600 pointer-events-none';
                 eventsLayer.appendChild(dot);
 
-                // Card evento cliccabile
                 const card = document.createElement('button');
-  
+                card.type = 'button';
+                card.style.left = `${x - 8}px`;
+                card.style.top = `${top}px`;
+                card.className = 'absolute max-w-[165px] rounded-lg bg-white border border-slate-200 hover:border-indigo-400 px-2.5 py-1.5 shadow-2xs hover:shadow-sm transition text-left cursor-pointer';
+
+                card.innerHTML = `
+                    <div class="text-[11px] font-bold text-indigo-600 tabular-nums">${ev.year}</div>
+      
