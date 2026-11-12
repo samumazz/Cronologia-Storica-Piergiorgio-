@@ -1,425 +1,745 @@
 <!DOCTYPE html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cronologia Storica (1517 - 1648)</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts: Inter -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cronologia Storica (1517 - 1648)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-        /* Scrollbar orizzontale pulita */
-        .timeline-viewport::-webkit-scrollbar {
-            height: 8px;
-        }
-        .timeline-viewport::-webkit-scrollbar-track {
-            background: #f1f5f9;
-            border-radius: 9999px;
-        }
-        .timeline-viewport::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 9999px;
-        }
-        .timeline-viewport::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
-        }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
 
-        /* Modale <dialog> pulita */
-        dialog {
-            padding: 0;
-            border: none;
-            border-radius: 0.75rem;
-            background: transparent;
-            max-width: 92vw;
-            width: 520px;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-        }
-        dialog::backdrop {
-            background: rgba(15, 23, 42, 0.5);
-            backdrop-filter: blur(2px);
-        }
-    </style>
+    header {
+      background-color: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
+
+    header h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #1e293b;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .zoom-btn {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .zoom-btn:hover {
+      background: #e2e8f0;
+    }
+
+    main {
+      flex: 1;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .timeline-card {
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .timeline-topbar {
+      padding: 12px 20px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 0.85rem;
+      color: #475569;
+    }
+
+    .legend {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+    }
+
+    .legend-bar {
+      width: 22px;
+      height: 10px;
+      border-radius: 4px;
+      background: #2563eb;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #d97706;
+    }
+
+    .timeline-scroll {
+      overflow-x: auto;
+      overflow-y: hidden;
+      width: 100%;
+      padding: 24px 0 32px 0;
+      cursor: grab;
+    }
+
+    .timeline-scroll:active {
+      cursor: grabbing;
+    }
+
+    .timeline-canvas {
+      position: relative;
+      height: 520px;
+      margin: 0 40px;
+    }
+
+    /* Griglia anni */
+    .year-tick {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      border-left: 1px dashed #e2e8f0;
+      pointer-events: none;
+    }
+
+    .year-tick.major {
+      border-left: 1px solid #cbd5e1;
+    }
+
+    .year-label {
+      position: absolute;
+      top: 235px;
+      transform: translateX(-50%);
+      background: #f1f5f9;
+      color: #334155;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+      border: 1px solid #cbd5e1;
+      z-index: 5;
+    }
+
+    /* Asse centrale */
+    .central-axis {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 247px;
+      height: 3px;
+      background: #94a3b8;
+      z-index: 2;
+    }
+
+    /* Barre Periodi e Governi (Proporzionali) */
+    .period-bar {
+      position: absolute;
+      height: 36px;
+      border-radius: 8px;
+      padding: 0 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      color: #ffffff;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(15, 23, 42, 0.14);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      z-index: 4;
+      overflow: hidden;
+      white-space: nowrap;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    .period-bar:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(15, 23, 42, 0.22);
+      z-index: 10;
+    }
+
+    .period-title {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .period-years {
+      font-size: 0.72rem;
+      opacity: 0.92;
+      font-weight: 500;
+      flex-shrink: 0;
+    }
+
+    /* Eventi Puntuali (Sotto l'asse) */
+    .event-marker {
+      position: absolute;
+      top: 248px;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      cursor: pointer;
+      z-index: 4;
+    }
+
+    .event-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #d97706;
+      border: 3px solid #ffffff;
+      box-shadow: 0 0 0 2px #d97706;
+      margin-top: -6px;
+      transition: transform 0.15s;
+    }
+
+    .event-marker:hover .event-dot {
+      transform: scale(1.25);
+    }
+
+    .event-stem {
+      width: 2px;
+      background: #cbd5e1;
+    }
+
+    .event-card {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-left: 4px solid #d97706;
+      border-radius: 6px;
+      padding: 6px 10px;
+      width: 155px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .event-marker:hover .event-card {
+      transform: translateY(2px);
+      border-color: #d97706;
+      z-index: 12;
+    }
+
+    .event-year {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #b45309;
+    }
+
+    .event-name {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: #1e293b;
+      line-height: 1.25;
+      margin-top: 2px;
+    }
+
+    /* Finestra Modale */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 50;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal-box {
+      background: #ffffff;
+      border-radius: 12px;
+      max-width: 520px;
+      width: 100%;
+      padding: 24px;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+      animation: fadeIn 0.15s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.97); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .modal-badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 999px;
+      color: #ffffff;
+      margin-bottom: 6px;
+    }
+
+    .modal-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .modal-close {
+      background: #f1f5f9;
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      color: #475569;
+    }
+
+    .modal-close:hover {
+      background: #e2e8f0;
+    }
+
+    .modal-body {
+      font-size: 0.95rem;
+      line-height: 1.6;
+      color: #334155;
+    }
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+<body>
 
-    <!-- Intestazione -->
-    <header class="bg-white border-b border-slate-200 px-4 sm:px-8 py-6 text-center">
-        <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
-            Cronologia Storica (1517 - 1648)
-        </h1>
-        <p class="mt-1.5 text-sm sm:text-base text-slate-500">
-            Clicca su qualsiasi evento o periodo per visualizzare il dettaglio
-        </p>
-    </header>
+  <header>
+    <div>
+      <h1>Cronologia Storica (1517 - 1648)</h1>
+      <p class="subtitle">Clicca su qualsiasi periodo o evento per visualizzare il dettaglio</p>
+    </div>
+    <div class="zoom-controls">
+      <button class="zoom-btn" id="zoomOut">− Riduci</button>
+      <button class="zoom-btn" id="zoomReset">100%</button>
+      <button class="zoom-btn" id="zoomIn">+ Ingrandisci</button>
+    </div>
+  </header>
 
-    <!-- Contenitore principale della linea del tempo -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col">
-        <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden flex-1 flex flex-col">
-            
-            <!-- Area scorrevole orizzontalmente -->
-            <div id="timelineViewport" class="timeline-viewport overflow-x-auto overflow-y-auto relative flex-1 select-none cursor-grab active:cursor-grabbing">
-                <div id="timelineTrack" class="relative min-h-[520px] pb-8">
-                    
-                    <!-- Griglia verticale degli anni -->
-                    <div id="yearGrid" class="absolute inset-0 pointer-events-none"></div>
-
-                    <!-- Intestazione asse cronologico (1517 - 1648) -->
-                    <div id="yearHeader" class="sticky top-0 z-20 h-10 bg-slate-100/95 backdrop-blur-xs border-b border-slate-200 flex items-center"></div>
-
-                    <!-- Fascia Periodi e Governi (barre orizzontali proporzionali alla durata) -->
-                    <div id="periodsLayer" class="relative pt-4 pb-3"></div>
-
-                    <!-- Linea centrale dell'asse del tempo -->
-                    <div class="relative h-0.5 bg-slate-300 my-1"></div>
-
-                    <!-- Fascia Eventi Puntuali -->
-                    <div id="eventsLayer" class="relative pt-4 pb-6"></div>
-
-                </div>
-            </div>
+  <main>
+    <div class="timeline-card">
+      <div class="timeline-topbar">
+        <span>Scorri orizzontalmente per esplorare gli anni dal 1517 al 1648</span>
+        <div class="legend">
+          <div class="legend-item">
+            <span class="legend-bar"></span>
+            <span>Periodi e Governi (durata proporzionale)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot"></span>
+            <span>Eventi chiave</span>
+          </div>
         </div>
-    </main>
+      </div>
 
-    <!-- Modale di dettaglio unica per Periodi ed Eventi -->
-    <dialog id="eventModal" class="text-slate-800">
-        <article class="bg-white rounded-xl border border-slate-200 overflow-hidden">
-            <div class="px-6 py-4 border-b border-slate-100 flex items-start justify-between gap-4">
-                <div>
-                    <span id="modalDate" class="inline-block text-xs font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md mb-1.5">
-                        1624 - 1644
-                    </span>
-                    <h2 id="modalTitle" class="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
-                        Governo di Richelieu
-                    </h2>
-                </div>
-                <button id="closeModalBtn" aria-label="Chiudi" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
-            </div>
-            <div class="px-6 py-5">
-                <p id="modalDescription" class="text-sm sm:text-base text-slate-600 leading-relaxed">
-                    Descrizione dell'evento o del periodo storico.
-                </p>
-            </div>
-            <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex justify-end">
-                <button id="closeModalFooterBtn" class="px-4 py-1.5 text-sm font-medium rounded-lg bg-slate-800 hover:bg-slate-900 text-white transition cursor-pointer">
-                    Chiudi
-                </button>
-            </div>
-        </article>
-    </dialog>
+      <div class="timeline-scroll" id="timelineScroll">
+        <div class="timeline-canvas" id="timelineCanvas"></div>
+      </div>
+    </div>
+  </main>
 
-    <script>
-        /**
-         * SCALA TEMPORALE PROPORZIONALE (1517 - 1648)
-         * Ogni anno occupa esattamente PX_PER_YEAR pixel.
-         */
-        const START_YEAR = 1517;
-        const END_YEAR = 1648;
-        const PX_PER_YEAR = 16;
-        const OFFSET_LEFT = 48;
-        const OFFSET_RIGHT = 64;
+  <div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div>
+          <span class="modal-badge" id="modalBadge"></span>
+          <h3 class="modal-title" id="modalTitle"></h3>
+        </div>
+        <button class="modal-close" id="modalClose" aria-label="Chiudi">✕</button>
+      </div>
+      <p class="modal-body" id="modalDesc"></p>
+    </div>
+  </div>
 
-        // Dati storici: Periodi/Governi (con startYear ed endYear) ed Eventi puntuali (con year)
-        const TIMELINE_DATA = [
-            // --- PERIODI E GOVERNI ---
-            {
-                type: 'period',
-                title: 'Impero e Regno di Carlo V',
-                startYear: 1519,
-                endYear: 1556,
-                color: 'bg-amber-600 border-amber-700',
-                description: 'Carlo V d\'Asburgo governa su un vastissimo impero europeo e coloniale, affrontando la Riforma protestante in Germania, le guerre d\'Italia contro la Francia e l\'espansione dell\'Impero Ottomano fino all\'abdicazione del 1556.'
-            },
-            {
-                type: 'period',
-                title: 'Concilio di Trento',
-                startYear: 1545,
-                endYear: 1563,
-                color: 'bg-purple-600 border-purple-700',
-                description: 'Concilio ecumenico convocato per rispondere alla Riforma protestante: definisce i dogmi cattolici, riforma il clero e avvia la Controriforma.'
-            },
-            {
-                type: 'period',
-                title: 'Regno di Filippo II di Spagna',
-                startYear: 1556,
-                endYear: 1598,
-                color: 'bg-orange-600 border-orange-700',
-                description: 'Figlio di Carlo V, guida la Spagna al suo apogeo politico e militare come difensore del cattolicesimo, affrontando la rivolta dei Paesi Bassi, gli Ottomani e l\'Inghilterra.'
-            },
-            {
-                type: 'period',
-                title: 'Regno di Elisabetta I d\'Inghilterra',
-                startYear: 1558,
-                endYear: 1603,
-                color: 'bg-rose-600 border-rose-700',
-                description: 'L\'età elisabettiana consolida l\'anglicanesimo, sviluppa la potenza navale e commerciale inglese e segna una straordinaria fioritura culturale.'
-            },
-            {
-                type: 'period',
-                title: 'Guerre di Religione in Francia',
-                startYear: 1562,
-                endYear: 1598,
-                color: 'bg-red-600 border-red-700',
-                description: 'Serie di conflitti civili e religiosi tra cattolici e ugonotti che sconvolgono la Francia fino all\'ascesa di Enrico IV e all\'Editto di Nantes.'
-            },
-            {
-                type: 'period',
-                title: 'Regno di Enrico IV di Borbone',
-                startYear: 1589,
-                endYear: 1610,
-                color: 'bg-sky-600 border-sky-700',
-                description: 'Capostipite della dinastia Borbone, pacifica la Francia con l\'Editto di Nantes (1598) e avvia la ricostruzione economica del regno.'
-            },
-            {
-                type: 'period',
-                title: 'Guerra dei Trent\'anni',
-                startYear: 1618,
-                endYear: 1648,
-                color: 'bg-slate-700 border-slate-800',
-                description: 'Conflitto europeo combattuto principalmente nell\'Impero tedesco tra schieramento cattolico-asburgico e potenze protestanti affiancate dalla Francia, concluso con la Pace di Vestfalia.'
-            },
-            {
-                type: 'period',
-                title: 'Governo del Conte-Duca di Olivares (Spagna)',
-                startYear: 1621,
-                endYear: 1643,
-                color: 'bg-amber-700 border-amber-800',
-                description: 'Primo ministro di Filippo IV di Spagna: tenta di centralizzare le risorse militari dell\'impero spagnolo (Unión de Armas) in rivalità diretta con la Francia di Richelieu.'
-            },
-            {
-                type: 'period',
-                title: 'Governo di Richelieu',
-                startYear: 1624,
-                endYear: 1644,
-                color: 'bg-indigo-600 border-indigo-700',
-                description: 'Primo ministro di Luigi XIII: rafforza l\'assolutismo monarchico in Francia ridimensionando il potere politico-militare degli ugonotti e dell\'alta nobiltà, e contrasta l\'egemonia degli Asburgo nella Guerra dei Trent\'anni.'
-            },
+  <script>
+    const START_YEAR = 1515;
+    const END_YEAR = 1650;
+    let pixelsPerYear = 13;
 
-            // --- EVENTI PUNTUALI ---
-            {
-                type: 'event',
-                year: 1517,
-                title: '95 Tesi di Martin Lutero',
-                description: 'Martin Lutero affigge a Wittenberg le 95 tesi contro la vendita delle indulgenze, dando inizio alla Riforma protestante.'
-            },
-            {
-                type: 'event',
-                year: 1521,
-                title: 'Dieta di Worms',
-                description: 'Lutero rifiuta di ritrattare le proprie dottrine davanti all\'imperatore Carlo V e viene messo al bando dall\'Impero.'
-            },
-            {
-                type: 'event',
-                year: 1527,
-                title: 'Sacco di Roma',
-                description: 'I lanzichenecchi al servizio di Carlo V saccheggiano Roma, segnando una svolta nella crisi politica italiana.'
-            },
-            {
-                type: 'event',
-                year: 1534,
-                title: 'Atto di Supremazia',
-                description: 'Enrico VIII si proclama Capo Supremo della Chiesa d\'Inghilterra, sancendo lo scisma anglicano da Roma.'
-            },
-            {
-                type: 'event',
-                year: 1555,
-                title: 'Pace di Augusta',
-                description: 'Riconosce la libertà religiosa ai principi luterani nell\'Impero secondo il principio "Cuius regio, eius religio".'
-            },
-            {
-                type: 'event',
-                year: 1571,
-                title: 'Battaglia di Lepanto',
-                description: 'La Lega Santa sconfigge la flotta dell\'Impero Ottomano arrestandone l\'espansione nel Mediterraneo.'
-            },
-            {
-                type: 'event',
-                year: 1572,
-                title: 'Notte di San Bartolomeo',
-                description: 'Massacro degli ugonotti a Parigi durante le guerre di religione francesi.'
-            },
-            {
-                type: 'event',
-                year: 1588,
-                title: 'Sconfitta dell\'Invincibile Armata',
-                description: 'La flotta spagnola inviata da Filippo II contro l\'Inghilterra viene sconfitta dalla marina inglese e dalle tempeste.'
-            },
-            {
-                type: 'event',
-                year: 1598,
-                title: 'Editto di Nantes',
-                description: 'Enrico IV concede libertà di culto agli ugonotti ponendo fine alle guerre di religione in Francia.'
-            },
-            {
-                type: 'event',
-                year: 1618,
-                title: 'Defenestrazione di Praga',
-                description: 'I nobili boemi gettano dalla finestra i rappresentanti imperiali: inizia la Guerra dei Trent\'anni.'
-            },
-            {
-                type: 'event',
-                year: 1628,
-                title: 'Presa di La Rochelle',
-                description: 'Le truppe reali guidate dal Cardinale Richelieu espugnano la principale piazzaforte ugonotta in Francia.'
-            },
-            {
-                type: 'event',
-                year: 1633,
-                title: 'Processo a Galileo Galilei',
-                description: 'Galileo Galilei viene processato dal Sant\'Uffizio a Roma e costretto ad abiurare la teoria eliocentrica.'
-            },
-            {
-                type: 'event',
-                year: 1648,
-                title: 'Pace di Vestfalia',
-                description: 'Pone fine alla Guerra dei Trent\'anni e ridefinisce gli equilibri politici e religiosi europei.'
-            }
-        ];
+    // Periodi e governi con inizio e fine esatti (lunghezza barra = fine - inizio)
+    const periodi = [
+      {
+        titolo: "Regno di Carlo V d'Asburgo",
+        inizio: 1519,
+        fine: 1556,
+        corsia: 0,
+        colore: "#2563eb",
+        descrizione: "Carlo V governa un impero vastissimo che comprende Spagna, Paesi Bassi, possedimenti italiani, Germania e colonie americane, affrontando la Riforma protestante e le guerre d'Italia fino all'abdicazione del 1556."
+      },
+      {
+        titolo: "Regno di Filippo II",
+        inizio: 1556,
+        fine: 1598,
+        corsia: 0,
+        colore: "#1d4ed8",
+        descrizione: "Figlio di Carlo V, eredita la corona di Spagna e i domini coloniali e italiani. Difensore del cattolicesimo, affronta la rivolta dei Paesi Bassi, l'Impero Ottomano e l'Inghilterra."
+      },
+      {
+        titolo: "Governo di Richelieu",
+        inizio: 1624,
+        fine: 1644,
+        corsia: 0,
+        colore: "#dc2626",
+        descrizione: "Primo ministro di Luigi XIII dal 1624 (e influenza diretta fino al 1644). Rafforza l'assolutismo monarchico in Francia, riduce il potere politico degli ugonotti e interviene nella Guerra dei Trent'anni contro gli Asburgo."
+      },
+      {
+        titolo: "Regno di Elisabetta I",
+        inizio: 1558,
+        fine: 1603,
+        corsia: 1,
+        colore: "#059669",
+        descrizione: "Consolida la Chiesa anglicana, promuove lo sviluppo marittimo e commerciale dell'Inghilterra e sconfigge l'Invincibile Armata spagnola nel 1588."
+      },
+      {
+        titolo: "Guerra dei Trent'anni",
+        inizio: 1618,
+        fine: 1648,
+        corsia: 1,
+        colore: "#7c3aed",
+        descrizione: "Conflitto europeo iniziato come scontro religioso nell'Impero germanico e trasformatosi in guerra per l'egemonia continentale tra Asburgo e Francia, concluso con la Pace di Vestfalia."
+      },
+      {
+        titolo: "Guerre di religione in Francia",
+        inizio: 1562,
+        fine: 1598,
+        corsia: 2,
+        colore: "#0891b2",
+        descrizione: "Serie di otto conflitti civili tra cattolici e ugonotti (calvinisti francesi), culminati nella notte di San Bartolomeo e risolti con l'Editto di Nantes."
+      },
+      {
+        titolo: "Concilio di Trento",
+        inizio: 1545,
+        fine: 1563,
+        corsia: 2,
+        colore: "#4f46e5",
+        descrizione: "Concilio ecumenico convocato per rispondere alla Riforma protestante: definisce i dogmi cattolici e avvia la Controriforma."
+      },
+      {
+        titolo: "Governo del Conte-Duca di Olivares",
+        inizio: 1621,
+        fine: 1643,
+        corsia: 2,
+        colore: "#b91c1c",
+        descrizione: "Valido di Filippo IV di Spagna, tenta di centralizzare l'impero spagnolo e sostenere lo sforzo bellico nella Guerra dei Trent'anni."
+      }
+    ];
 
-        function yearToX(year) {
-            return OFFSET_LEFT + (year - START_YEAR) * PX_PER_YEAR;
+    // Eventi puntuali sotto l'asse
+    const eventi = [
+      {
+        anno: 1517,
+        titolo: "95 Tesi di Lutero",
+        livello: 0,
+        descrizione: "Martin Lutero affigge a Wittenberg le 95 tesi contro la vendita delle indulgenze, dando inizio alla Riforma protestante."
+      },
+      {
+        anno: 1527,
+        titolo: "Sacco di Roma",
+        livello: 1,
+        descrizione: "I lanzichenecchi al servizio di Carlo V saccheggiano Roma, segnando un punto di svolta nelle guerre d'Italia."
+      },
+      {
+        anno: 1555,
+        titolo: "Pace di Augusta",
+        livello: 0,
+        descrizione: "Sancisce il principio 'cuius regio, eius religio' nell'Impero germanico tra principi cattolici e luterani."
+      },
+      {
+        anno: 1571,
+        titolo: "Battaglia di Lepanto",
+        livello: 1,
+        descrizione: "La flotta della Lega Santa sconfigge la flotta dell'Impero Ottomano nel golfo di Patrasso."
+      },
+      {
+        anno: 1588,
+        titolo: "Invincibile Armata",
+        livello: 0,
+        descrizione: "La flotta spagnola inviata da Filippo II contro l'Inghilterra di Elisabetta I viene sconfitta."
+      },
+      {
+        anno: 1598,
+        titolo: "Editto di Nantes",
+        livello: 1,
+        descrizione: "Enrico IV concede libertà di culto agli ugonotti in Francia, ponendo fine alle guerre di religione."
+      },
+      {
+        anno: 1628,
+        titolo: "Presa di La Rochelle",
+        livello: 0,
+        descrizione: "Richelieu espugna la principale piazzaforte ugonotta in Francia, eliminando l'autonomia politica dei protestanti."
+      },
+      {
+        anno: 1648,
+        titolo: "Pace di Vestfalia",
+        livello: 1,
+        descrizione: "Pone fine alla Guerra dei Trent'anni, ridisegna gli equilibri europei e sancisce la sovranità degli Stati nazionali."
+      }
+    ];
+
+    const canvas = document.getElementById("timelineCanvas");
+    const modalBackdrop = document.getElementById("modalBackdrop");
+    const modalBadge = document.getElementById("modalBadge");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalDesc = document.getElementById("modalDesc");
+    const modalClose = document.getElementById("modalClose");
+
+    function openModal(badgeText, badgeColor, title, description) {
+      modalBadge.textContent = badgeText;
+      modalBadge.style.backgroundColor = badgeColor;
+      modalTitle.textContent = title;
+      modalDesc.textContent = description;
+      modalBackdrop.classList.add("open");
+    }
+
+    modalClose.addEventListener("click", () => modalBackdrop.classList.remove("open"));
+    modalBackdrop.addEventListener("click", (e) => {
+      if (e.target === modalBackdrop) modalBackdrop.classList.remove("open");
+    });
+
+    function renderTimeline() {
+      canvas.innerHTML = "";
+      const totalWidth = (END_YEAR - START_YEAR) * pixelsPerYear;
+      canvas.style.width = totalWidth + "px";
+
+      // Asse centrale
+      const axis = document.createElement("div");
+      axis.className = "central-axis";
+      canvas.appendChild(axis);
+
+      // Tacche anni
+      for (let year = START_YEAR; year <= END_YEAR; year += 5) {
+        const x = (year - START_YEAR) * pixelsPerYear;
+        const isMajor = year % 10 === 0;
+
+        const tick = document.createElement("div");
+        tick.className = "year-tick" + (isMajor ? " major" : "");
+        tick.style.left = x + "px";
+        canvas.appendChild(tick);
+
+        if (isMajor || pixelsPerYear >= 16) {
+          const label = document.createElement("div");
+          label.className = "year-label";
+          label.style.left = x + "px";
+          label.textContent = year;
+          canvas.appendChild(label);
         }
+      }
 
-        // Disponi i periodi su corsie verticali non sovrapposte
-        function layoutPeriods(periods) {
-            const sorted = [...periods].sort((a, b) => a.startYear - b.startYear || (b.endYear - b.startYear) - (a.endYear - a.startYear));
-            const laneEnds = [];
-            return sorted.map(p => {
-                let lane = laneEnds.findIndex(endYear => endYear + 1 <= p.startYear);
-                if (lane === -1) {
-                    lane = laneEnds.length;
-                    laneEnds.push(p.endYear);
-                } else {
-                    laneEnds[lane] = p.endYear;
-                }
-                return { ...p, lane };
-            });
-        }
+      // Periodi e Governi (lunghezza = (fine - inizio) * pixelsPerYear)
+      periodi.forEach((p) => {
+        const left = (p.inizio - START_YEAR) * pixelsPerYear;
+        const width = Math.max((p.fine - p.inizio) * pixelsPerYear, 28);
+        const top = 30 + p.corsia * 52;
+        const durata = p.fine - p.inizio;
 
-        // Disponi gli eventi puntuali su livelli per evitare sovrapposizioni di testo
-        function layoutEvents(events) {
-            const sorted = [...events].sort((a, b) => a.year - b.year);
-            const laneRightPx = [];
-            const cardWidth = 155;
-            return sorted.map(ev => {
-                const x = yearToX(ev.year);
-                let lane = laneRightPx.findIndex(rightEdge => rightEdge + 12 <= x);
-                if (lane === -1) {
-                    lane = laneRightPx.length;
-                    laneRightPx.push(x + cardWidth);
-                } else {
-                    laneRightPx[lane] = x + cardWidth;
-                }
-                return { ...ev, lane };
-            });
-        }
+        const bar = document.createElement("div");
+        bar.className = "period-bar";
+        bar.style.left = left + "px";
+        bar.style.width = width + "px";
+        bar.style.top = top + "px";
+        bar.style.backgroundColor = p.colore;
+        bar.title = `${p.titolo} (${p.inizio} - ${p.fine}, ${durata} anni)`;
 
-        function renderTimeline() {
-            const track = document.getElementById('timelineTrack');
-            const yearGrid = document.getElementById('yearGrid');
-            const yearHeader = document.getElementById('yearHeader');
-            const periodsLayer = document.getElementById('periodsLayer');
-            const eventsLayer = document.getElementById('eventsLayer');
+        bar.innerHTML = `
+          <span class="period-title">${p.titolo}</span>
+          <span class="period-years">${p.inizio}–${p.fine}</span>
+        `;
 
-            const totalWidth = OFFSET_LEFT + (END_YEAR - START_YEAR) * PX_PER_YEAR + OFFSET_RIGHT;
-            track.style.width = `${totalWidth}px`;
+        bar.addEventListener("click", () => {
+          openModal(
+            `Periodo / Governo: ${p.inizio} – ${p.fine} (${durata} anni)`,
+            p.colore,
+            p.titolo,
+            p.descrizione
+          );
+        });
 
-            // 1. Asse degli anni (1517 - 1648)
-            yearGrid.innerHTML = '';
-            yearHeader.innerHTML = '';
+        canvas.appendChild(bar);
+      });
 
-            for (let y = START_YEAR; y <= END_YEAR; y++) {
-                const x = yearToX(y);
-                const isMajor = (y === START_YEAR || y === END_YEAR || y % 10 === 0);
-                const isMid = (y % 5 === 0);
+      // Eventi puntuali
+      eventi.forEach((ev) => {
+        const left = (ev.anno - START_YEAR) * pixelsPerYear;
+        const stemHeight = ev.livello === 0 ? 28 : 112;
 
-                if (isMajor || isMid) {
-                    const line = document.createElement('div');
-                    line.style.left = `${x}px`;
-                    line.className = isMajor
-                        ? 'absolute top-0 bottom-0 w-px bg-slate-200'
-                        : 'absolute top-10 bottom-0 w-px bg-slate-100';
-                    yearGrid.appendChild(line);
-                }
+        const marker = document.createElement("div");
+        marker.className = "event-marker";
+        marker.style.left = left + "px";
 
-                if (isMajor) {
-                    const label = document.createElement('div');
-                    label.style.left = `${x}px`;
-                    label.className = 'absolute -translate-x-1/2 text-xs font-semibold text-slate-600 tabular-nums';
-                    label.textContent = y;
-                    yearHeader.appendChild(label);
-                }
-            }
+        marker.innerHTML = `
+          <div class="event-dot"></div>
+          <div class="event-stem" style="height: ${stemHeight}px;"></div>
+          <div class="event-card">
+            <div class="event-year">${ev.anno}</div>
+            <div class="event-name">${ev.titolo}</div>
+          </div>
+        `;
 
-            // 2. Periodi e Governi
-            const periods = layoutPeriods(TIMELINE_DATA.filter(item => item.type === 'period'));
-            const periodLaneHeight = 40;
-            const maxPeriodLane = periods.reduce((max, p) => Math.max(max, p.lane), 0);
-            periodsLayer.style.height = `${(maxPeriodLane + 1) * periodLaneHeight + 16}px`;
-            periodsLayer.innerHTML = '';
+        marker.addEventListener("click", () => {
+          openModal(`Evento: ${ev.anno}`, "#d97706", ev.titolo, ev.descrizione);
+        });
 
-            periods.forEach(period => {
-                const left = yearToX(period.startYear);
-                const width = Math.max((period.endYear - period.startYear) * PX_PER_YEAR, 24);
-                const top = period.lane * periodLaneHeight + 8;
+        canvas.appendChild(marker);
+      });
+    }
 
-                const bar = document.createElement('button');
-                bar.type = 'button';
-                bar.style.left = `${left}px`;
-                bar.style.width = `${width}px`;
-                bar.style.top = `${top}px`;
-                bar.title = `${period.title} (${period.startYear} - ${period.endYear})`;
-                bar.className = `absolute h-8 rounded-lg border ${period.color} text-white px-2.5 flex items-center justify-between gap-2 shadow-xs hover:brightness-110 hover:-translate-y-0.5 transition cursor-pointer overflow-hidden text-left`;
+    document.getElementById("zoomIn").addEventListener("click", () => {
+      pixelsPerYear = Math.min(26, pixelsPerYear + 3);
+      renderTimeline();
+    });
 
-                bar.innerHTML = `
-                    <span class="truncate text-xs font-semibold">${period.title}</span>
-                    <span class="shrink-0 text-[10px] font-medium bg-black/20 px-1.5 py-0.5 rounded tabular-nums">${period.startYear}-${period.endYear}</span>
-                `;
+    document.getElementById("zoomOut").addEventListener("click", () => {
+      pixelsPerYear = Math.max(7, pixelsPerYear - 3);
+      renderTimeline();
+    });
 
-                bar.addEventListener('click', () => openModal(period));
-                periodsLayer.appendChild(bar);
-            });
+    document.getElementById("zoomReset").addEventListener("click", () => {
+      pixelsPerYear = 13;
+      renderTimeline();
+    });
 
-            // 3. Eventi puntuali
-            const events = layoutEvents(TIMELINE_DATA.filter(item => item.type === 'event'));
-            const eventLaneHeight = 52;
-            const maxEventLane = events.reduce((max, e) => Math.max(max, e.lane), 0);
-            eventsLayer.style.height = `${(maxEventLane + 1) * eventLaneHeight + 24}px`;
-            eventsLayer.innerHTML = '';
+    // Scorrimento con trascinamento mouse
+    const scrollBox = document.getElementById("timelineScroll");
+    let isDown = false;
+    let startX;
+    let scrollLeft;
 
-            events.forEach(ev => {
-                const x = yearToX(ev.year);
-                const top = ev.lane * eventLaneHeight + 14;
+    scrollBox.addEventListener("mousedown", (e) => {
+      isDown = true;
+      startX = e.pageX - scrollBox.offsetLeft;
+      scrollLeft = scrollBox.scrollLeft;
+    });
+    scrollBox.addEventListener("mouseleave", () => (isDown = false));
+    scrollBox.addEventListener("mouseup", () => (isDown = false));
+    scrollBox.addEventListener("mousemove", (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - scrollBox.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      scrollBox.scrollLeft = scrollLeft - walk;
+    });
 
-                const stem = document.createElement('div');
-                stem.style.left = `${x}px`;
-                stem.style.top = '0px';
-                stem.style.height = `${top + 10}px`;
-                stem.className = 'absolute w-px bg-slate-300 pointer-events-none';
-                eventsLayer.appendChild(stem);
+    renderTimeline();
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cronologia Storica (1517 - 1648)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-                const dot = document.createElement('div');
-                dot.style.left = `${x - 4}px`;
-                dot.style.top = '-4px';
-                dot.className = 'absolute w-2 h-2 rounded-full bg-indigo-600 pointer-events-none';
-                eventsLayer.appendChild(dot);
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
 
-                const card = document.createElement('button');
-                card.type = 'button';
-                card.style.left = `${x - 8}px`;
-                card.style.top = `${top}px`;
-                card.className = 'absolute max-w-[165px] rounded-lg bg-white border border-slate-200 hover:border-indigo-400 px-2.5 py-1.5 shadow-2xs hover:shadow-sm transition text-left cursor-pointer';
+    header {
+      background-color: #ffffff;
+      border-bottom: 1px solid #e2e8f0;
+      padding: 18px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 20;
+    }
 
-                card.innerHTML = `
-                    <div class="text-[11px] font-bold text-indigo-600 tabular-nums">${ev.year}</div>
-      
+    header h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #1e293b;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .zoom-btn {
+      background: #f1f5f9;
+      border: 1px solid #cbd5e1;
+      color: #334155;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0
