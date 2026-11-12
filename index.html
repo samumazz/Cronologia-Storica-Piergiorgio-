@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cronologia Storica (1517 - 1648)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Scrollbar orizzontale pulita */
+        .timeline-viewport::-webkit-scrollbar {
+            height: 8px;
+        }
+        .timeline-viewport::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 9999px;
+        }
+        .timeline-viewport::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        .timeline-viewport::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        /* Modale <dialog> pulita e fedele all'originale */
+        dialog {
+            padding: 0;
+            border: none;
+            border-radius: 0.75rem;
+            background: transparent;
+            max-width: 92vw;
+            width: 520px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+        }
+        dialog::backdrop {
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(2px);
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Intestazione fedele all'originale -->
+    <header class="bg-white border-b border-slate-200 px-4 sm:px-8 py-6 text-center">
+        <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+            Cronologia Storica (1517 - 1648)
+        </h1>
+        <p class="mt-1.5 text-sm sm:text-base text-slate-500">
+            Clicca su qualsiasi evento per visualizzare il dettaglio
+        </p>
+    </header>
+
+    <!-- Contenitore principale della linea del tempo -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex flex-col">
+        <div class="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden flex-1 flex flex-col">
+            
+            <!-- Area scorrevole orizzontalmente -->
+            <div id="timelineViewport" class="timeline-viewport overflow-x-auto overflow-y-auto relative flex-1 select-none cursor-grab active:cursor-grabbing">
+                <div id="timelineTrack" class="relative min-h-[520px] pb-8">
+                    
+                    <!-- Griglia verticale degli anni -->
+                    <div id="yearGrid" class="absolute inset-0 pointer-events-none"></div>
+
+                    <!-- Intestazione asse cronologico (1517 - 1648) -->
+                    <div id="yearHeader" class="sticky top-0 z-20 h-10 bg-slate-100/95 backdrop-blur-xs border-b border-slate-200 flex items-center"></div>
+
+                    <!-- Fascia Periodi e Governi (barre orizzontali proporzionali alla durata) -->
+                    <div id="periodsLayer" class="relative pt-4 pb-3"></div>
+
+                    <!-- Linea centrale dell'asse del tempo -->
+                    <div class="relative h-0.5 bg-slate-300 my-1"></div>
+
+                    <!-- Fascia Eventi Puntuali -->
+                    <div id="eventsLayer" class="relative pt-4 pb-6"></div>
+
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modale di dettaglio unica per Periodi ed Eventi -->
+    <dialog id="eventModal" class="text-slate-800">
+        <article class="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 border-b border-slate-100 flex items-start justify-between gap-4">
+                <div>
+                    <span id="modalDate" class="inline-block text-xs font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-0.5 rounded-md mb-1.5">
+                        1624 - 1644
+                    </span>
+                    <h2 id="modalTitle" class="text-lg sm:text-xl font-bold text-slate-900 leading-snug">
+                        Governo di Richelieu
+                    </h2>
+                </div>
+                <button id="closeModalBtn" aria-label="Chiudi" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="px-6 py-5">
+                <p id="modalDescription" class="text-sm sm:text-base text-slate-600 leading-relaxed">
+                    Descrizione dell'evento o del periodo storico.
+                </p>
+            </div>
+            <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-100 flex justify-end">
+                <button id="closeModalFooterBtn" class="px-4 py-1.5 text-sm font-medium rounded-lg bg-slate-800 hover:bg-slate-900 text-white transition cursor-pointer">
+                    Chiudi
+                </button>
+            </div>
+        </article>
+    </dialog>
+
+    <script>
+        /**
+         * SCALA TEMPORALE PROPORZIONALE (1517 - 1648)
+         * Ogni anno occupa esattamente PX_PER_YEAR pixel: in questo modo
+         * la posizione sinistra e la larghezza di ogni periodo/governo
+         * corrispondono esattamente alla sua durata storica (endYear - startYear).
+         */
+        const START_YEAR = 1517;
+        const END_YEAR = 1648;
+        const PX_PER_YEAR = 16; // 16px per anno -> 20 anni (Richelieu 1624-1644) = 320px esatti
+        const OFFSET_LEFT = 48;
+        const OFFSET_RIGHT = 64;
+
+        // Dati storici: Periodi/Governi (con startYear ed endYear) ed Eventi puntuali (con year)
+        const TIMELINE_DATA = [
+            // --- PERIODI E GOVERNI (durata proporzionale sull'asse) ---
+            {
+                type: 'period',
+                title: 'Impero e Regno di Carlo V',
+                startYear: 1519,
+                endYear: 1556,
+                color: 'bg-amber-600 border-amber-700',
+                description: 'Carlo V d\'Asburgo governa su un vastissimo impero europeo e coloniale, affrontando la Riforma protestante in Germania, le guerre d\'Italia contro la Francia e l\'espansione dell\'Impero Ottomano fino all\'abdicazione del 1556.'
+            },
+            {
+                type: 'period',
+                title: 'Concilio di Trento',
+                startYear: 1545,
+                endYear: 1563,
+                color: 'bg-purple-600 border-purple-700',
+                description: 'Concilio ecumenico convocato per rispondere alla Riforma protestante: definisce i dogmi cattolici, riforma il clero e avvia la Controriforma.'
+            },
+            {
+                type: 'period',
+                title: 'Regno di Filippo II di Spagna',
+                startYear: 1556,
+                endYear: 1598,
+                color: 'bg-orange-600 border-orange-700',
+                description: 'Figlio di Carlo V, guida la Spagna al suo apogeo politico e militare come difensore del cattolicesimo, affrontando la rivolta dei Paesi Bassi, gli Ottomani e l\'Inghilterra.'
+            },
+            {
+                type: 'period',
+                title: 'Regno di Elisabetta I d\'Inghilterra',
+                startYear: 1558,
+                endYear: 1603,
+                color: 'bg-rose-600 border-rose-700',
+                description: 'L\'età elisabettiana consolida l\'anglicanesimo, sviluppa la potenza navale e commerciale inglese e segna una straordinaria fioritura culturale.'
+            },
+            {
+                type: 'period',
+                title: 'Guerre di Religione in Francia',
+                startYear: 1562,
+                endYear: 1598,
+                color: 'bg-red-600 border-red-700',
+                description: 'Serie di conflitti civili e religiosi tra cattolici e ugonotti che sconvolgono la Francia fino all\'ascesa di Enrico IV e all\'Editto di Nantes.'
+            },
+            {
+                type: 'period',
+                title: 'Regno di Enrico IV di Borbone',
+                startYear: 1589,
+                endYear: 1610,
+                color: 'bg-sky-600 border-sky-700',
+                description: 'Capostipite della dinastia Borbone, pacifica la Francia con l\'Editto di Nantes (1598) e avvia la ricostruzione economica del regno.'
+            },
+            {
+                type: 'period',
+                title: 'Guerra dei Trent\'anni',
+                startYear: 1618,
+                endYear: 1648,
+                color: 'bg-slate-700 border-slate-800',
+                description: 'Conflitto europeo combattuto principalmente nell\'Impero tedesco tra schieramento cattolico-asburgico e potenze protestanti affiancate dalla Francia, concluso con la Pace di Vestfalia.'
+            },
+            {
+                type: 'period',
+                title: 'Governo del Conte-Duca di Olivares (Spagna)',
+                startYear: 1621,
+                endYear: 1643,
+                color: 'bg-amber-700 border-amber-800',
+                description: 'Primo ministro di Filippo IV di Spagna: tenta di centralizzare le risorse militari dell\'impero spagnolo (Unión de Armas) in rivalità diretta con la Francia di Richelieu.'
+            },
+            {
+                type: 'period',
+                title: 'Governo di Richelieu',
+                startYear: 1624,
+                endYear: 1644,
+                color: 'bg-indigo-600 border-indigo-700',
+                description: 'Primo ministro di Luigi XIII: rafforza l\'assolutismo monarchico in Francia ridimensionando il potere politico-militare degli ugonotti e dell\'alta nobiltà, e contrasta l\'egemonia degli Asburgo nella Guerra dei Trent\'anni.'
+            },
+
+            // --- EVENTI PUNTUALI ---
+            {
+                type: 'event',
+                year: 1517,
+                title: '95 Tesi di Martin Lutero',
+                description: 'Martin Lutero affigge a Wittenberg le 95 tesi contro la vendita delle indulgenze, dando inizio alla Riforma protestante.'
+            },
+            {
+                type: 'event',
+                year: 1521,
+                title: 'Dieta di Worms',
+                description: 'Lutero rifiuta di ritrattare le proprie dottrine davanti all\'imperatore Carlo V e viene messo al bando dall\'Impero.'
+            },
+            {
+                type: 'event',
+                year: 1527,
+                title: 'Sacco di Roma',
+                description: 'I lanzichenecchi al servizio di Carlo V saccheggiano Roma, segnando una svolta nella crisi politica italiana.'
+            },
+            {
+                type: 'event',
+                year: 1534,
+                title: 'Atto di Supremazia',
+                description: 'Enrico VIII si proclama Capo Supremo della Chiesa d\'Inghilterra, sancendo lo scisma anglicano da Roma.'
+            },
+            {
+                type: 'event',
+                year: 1555,
+                title: 'Pace di Augusta',
+                description: 'Riconosce la libertà religiosa ai principi luterani nell\'Impero secondo il principio "Cuius regio, eius religio".'
+            },
+            {
+                type: 'event',
+                year: 1571,
+                title: 'Battaglia di Lepanto',
+                description: 'La Lega Santa sconfigge la flotta dell\'Impero Ottomano arrestandone l\'espansione nel Mediterraneo.'
+            },
+            {
+                type: 'event',
+                year: 1572,
+                title: 'Notte di San Bartolomeo',
+                description: 'Massacro degli ugonotti a Parigi durante le guerre di religione francesi.'
+            },
+            {
+                type: 'event',
+                year: 1588,
+                title: 'Sconfitta dell\'Invincibile Armata',
+                description: 'La flotta spagnola inviata da Filippo II contro l\'Inghilterra viene sconfitta dalla marina inglese e dalle tempeste.'
+            },
+            {
+                type: 'event',
+                year: 1598,
+                title: 'Editto di Nantes',
+                description: 'Enrico IV concede libertà di culto agli ugonotti ponendo fine alle guerre di religione in Francia.'
+            },
+            {
+                type: 'event',
+                year: 1618,
+                title: 'Defenestrazione di Praga',
+                description: 'I nobili boemi gettano dalla finestra i rappresentanti imperiali: inizia la Guerra dei Trent\'anni.'
+            },
+            {
+                type: 'event',
+                year: 1628,
+                title: 'Presa di La Rochelle',
+                description: 'Le truppe reali guidate dal Cardinale Richelieu espugnano la principale piazzaforte ugonotta in Francia.'
+            },
+            {
+                type: 'event',
+                year: 1633,
+                title: 'Processo a Galileo Galilei',
+                description: 'Galileo Galilei viene processato dal Sant\'Uffizio a Roma e costretto ad abiurare la teoria eliocentrica.'
+            },
+            {
+                type: 'event',
+                year: 1648,
+                title: 'Pace di Vestfalia',
+                description: 'Pone fine alla Guerra dei Trent\'anni e ridefinisce gli equilibri politici e religiosi europei.'
+            }
+        ];
+
+        function yearToX(year) {
+            return OFFSET_LEFT + (year - START_YEAR) * PX_PER_YEAR;
+        }
+
+        // Disponi i periodi su corsie verticali non sovrapposte
+        function layoutPeriods(periods) {
+            const sorted = [...periods].sort((a, b) => a.startYear - b.startYear || (b.endYear - b.startYear) - (a.endYear - a.startYear));
+            const laneEnds = [];
+            return sorted.map(p => {
+                let lane = laneEnds.findIndex(endYear => endYear + 1 <= p.startYear);
+                if (lane === -1) {
+                    lane = laneEnds.length;
+                    laneEnds.push(p.endYear);
+                } else {
+                    laneEnds[lane] = p.endYear;
+                }
+                return { ...p, lane };
+            });
+        }
+
+        // Disponi gli eventi puntuali su livelli per evitare sovrapposizioni di testo
+        function layoutEvents(events) {
+            const sorted = [...events].sort((a, b) => a.year - b.year);
+            const laneRightPx = [];
+            const cardWidth = 155;
+            return sorted.map(ev => {
+                const x = yearToX(ev.year);
+                let lane = laneRightPx.findIndex(rightEdge => rightEdge + 12 <= x);
+                if (lane === -1) {
+                    lane = laneRightPx.length;
+                    laneRightPx.push(x + cardWidth);
+                } else {
+                    laneRightPx[lane] = x + cardWidth;
+                }
+                return { ...ev, lane };
+            });
+        }
+
+        function renderTimeline() {
+            const track = document.getElementById('timelineTrack');
+            const yearGrid = document.getElementById('yearGrid');
+            const yearHeader = document.getElementById('yearHeader');
+            const periodsLayer = document.getElementById('periodsLayer');
+            const eventsLayer = document.getElementById('eventsLayer');
+
+            const totalWidth = OFFSET_LEFT + (END_YEAR - START_YEAR) * PX_PER_YEAR + OFFSET_RIGHT;
+            track.style.width = `${totalWidth}px`;
+
+            // 1. Asse degli anni (1517 - 1648)
+            yearGrid.innerHTML = '';
+            yearHeader.innerHTML = '';
+
+            for (let y = START_YEAR; y <= END_YEAR; y++) {
+                const x = yearToX(y);
+                const isMajor = (y === START_YEAR || y === END_YEAR || y % 10 === 0);
+                const isMid = (y % 5 === 0);
+
+                if (isMajor || isMid) {
+                    const line = document.createElement('div');
+                    line.style.left = `${x}px`;
+                    line.className = isMajor
+                        ? 'absolute top-0 bottom-0 w-px bg-slate-200'
+                        : 'absolute top-10 bottom-0 w-px bg-slate-100';
+                    yearGrid.appendChild(line);
+                }
+
+                if (isMajor) {
+                    const label = document.createElement('div');
+                    label.style.left = `${x}px`;
+                    label.className = 'absolute -translate-x-1/2 text-xs font-semibold text-slate-600 tabular-nums';
+                    label.textContent = y;
+                    yearHeader.appendChild(label);
+                }
+            }
+
+            // 2. Periodi e Governi (barre larghe esattamente endYear - startYear)
+            const periods = layoutPeriods(TIMELINE_DATA.filter(item => item.type === 'period'));
+            const periodLaneHeight = 40;
+            const maxPeriodLane = periods.reduce((max, p) => Math.max(max, p.lane), 0);
+            periodsLayer.style.height = `${(maxPeriodLane + 1) * periodLaneHeight + 16}px`;
+            periodsLayer.innerHTML = '';
+
+            periods.forEach(period => {
+                const left = yearToX(period.startYear);
+                const width = Math.max((period.endYear - period.startYear) * PX_PER_YEAR, 24);
+                const top = period.lane * periodLaneHeight + 8;
+
+                const bar = document.createElement('button');
+                bar.type = 'button';
+                bar.style.left = `${left}px`;
+                bar.style.width = `${width}px`;
+                bar.style.top = `${top}px`;
+                bar.title = `${period.title} (${period.startYear} - ${period.endYear})`;
+                bar.className = `absolute h-8 rounded-lg border ${period.color} text-white px-2.5 flex items-center justify-between gap-2 shadow-xs hover:brightness-110 hover:-translate-y-0.5 transition cursor-pointer overflow-hidden text-left`;
+
+                bar.innerHTML = `
+                    <span class="truncate text-xs font-semibold">${period.title}</span>
+                    <span class="shrink-0 text-[10px] font-medium bg-black/20 px-1.5 py-0.5 rounded tabular-nums">${period.startYear}-${period.endYear}</span>
+                `;
+
+                bar.addEventListener('click', () => openModal(period));
+                periodsLayer.appendChild(bar);
+            });
+
+            // 3. Eventi puntuali
+            const events = layoutEvents(TIMELINE_DATA.filter(item => item.type === 'event'));
+            const eventLaneHeight = 52;
+            const maxEventLane = events.reduce((max, e) => Math.max(max, e.lane), 0);
+            eventsLayer.style.height = `${(maxEventLane + 1) * eventLaneHeight + 24}px`;
+            eventsLayer.innerHTML = '';
+
+            events.forEach(ev => {
+                const x = yearToX(ev.year);
+                const top = ev.lane * eventLaneHeight + 14;
+
+                // Linea verticale fino all'asse
+                const stem = document.createElement('div');
+                stem.style.left = `${x}px`;
+                stem.style.top = '0px';
+                stem.style.height = `${top + 10}px`;
+                stem.className = 'absolute w-px bg-slate-300 pointer-events-none';
+                eventsLayer.appendChild(stem);
+
+                // Punto sull'asse
+                const dot = document.createElement('div');
+                dot.style.left = `${x - 4}px`;
+                dot.style.top = '-4px';
+                dot.className = 'absolute w-2 h-2 rounded-full bg-indigo-600 pointer-events-none';
+                eventsLayer.appendChild(dot);
+
+                // Card evento cliccabile
+                const card = document.createElement('button');
+  
